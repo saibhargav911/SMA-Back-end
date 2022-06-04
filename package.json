@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "this is a social media application",
   "main": "index.js",
+  "type":"module",
   "scripts": {
     "start": "node index.js"
   },
