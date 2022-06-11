@@ -1,4 +1,4 @@
-import { Types, Schema, model } from 'mongoose';
+import mongoose from 'mongoose'
 
 const userSchema={
     name:{type:String},
@@ -9,6 +9,7 @@ const userSchema={
     date_of_birth:{type:Date},
     gender:{type:String},
     description:{type:String},
+    password:{type:String},
     location:{
         type:{
             type:String,
@@ -18,19 +19,19 @@ const userSchema={
         coordinates:[Number]
     },
     followers:[{
-        id:Types.ObjectId,
+        id:mongoose.Types.ObjectId,
     }],
     following:[{
-        id:Types.ObjectId,
+        id:mongoose.Types.ObjectId,
     }],
     likes:[{
-        id:Types.ObjectId,
+        id:mongoose.Types.ObjectId,
     }],
     comments:[{
-        id:Types.ObjectId,
+        id:mongoose.Types.ObjectId,
     }]
 };
-Schema(userSchema);
-const UserModel=model("User",userSchema);
+mongoose.Schema(userSchema);
+const UserModel=mongoose.model("User",userSchema);
 
 export default UserModel;
