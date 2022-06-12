@@ -4,6 +4,9 @@ import UserModel from "./../models/user.js";
 import securedPassword from "../middleware/securePassword.js";
 import Authentication from "../middleware/auth.js";
 import mongoose from "mongoose"
+import Upload from "../middleware/fileUpload.js";
+import multer from "multer";
+import fs from "fs";
 const User = {
     async test(req, res, next) {
         return res.send("Api is running....");
@@ -34,11 +37,11 @@ const User = {
                 }
                 else {
                     try {
-                        user.password=await securedPassword.hashPassword(req.body.password);
+                        user.password = await securedPassword.hashPassword(req.body.password);
                         var userDoc = await UserModel.create(user);
-                        var token=await Authentication.createToken(userDoc._id);
+                        var token = await Authentication.createToken(userDoc._id);
                         console.log("userDoc", userDoc);
-                        return res.send(await ResponseHandler.successResponse("User created successfully", userDoc,token));
+                        return res.send(await ResponseHandler.successResponse("User created successfully", userDoc, token));
                     }
                     catch (err) {
                         next(err);
@@ -53,55 +56,91 @@ const User = {
         }
 
     },
-    async login(req,res,next){
-        try{
-            var userData=await UserModel.findOne({email:req.body.email});
-            if(userData){
-                var isCorrectPassword=securedPassword.comparePassword(req.body.password,userData.password);
-                if(isCorrectPassword){
-                    var token=await Authentication.createToken(userData._id);
-                    return res.send(await ResponseHandler.successResponse("Logged in successsfully",userData,token))
+    async login(req, res, next) {
+        try {
+            var userData = await UserModel.findOne({ email: req.body.email });
+            if (userData) {
+                var isCorrectPassword = securedPassword.comparePassword(req.body.password, userData.password);
+                if (isCorrectPassword) {
+                    var token = await Authentication.createToken(userData._id);
+                    return res.send(await ResponseHandler.successResponse("Logged in successsfully", userData, token))
                 }
-                else{
+                else {
                     return res.send(await ResponseHandler.failureResponse("Password is Incorrect!"))
                 }
             }
-            else{
+            else {
                 return res.send(await ResponseHandler.failureResponse("Account Doesn't Exist Kindly Singnup"));
             }
         }
-        catch(err){
+        catch (err) {
             next(err);
         }
     },
-    async updatePassword(req,res,next){
-        try{
-            const userData=await UserModel.findById(req.user.userId);
-            const isCorrectPassword=securedPassword.comparePassword(req.body.oldPassword,userData.password);
-            console.log("request",req.user);
-            if(isCorrectPassword){
+    async updatePassword(req, res, next) {
+        try {
+            const userData = await UserModel.findById(req.user.userId);
+            const isCorrectPassword = securedPassword.comparePassword(req.body.oldPassword, userData.password);
+            console.log("request", req.user);
+            if (isCorrectPassword) {
                 console.log("password is correct")
-                if(req.body.newPassword==req.body.confirmPassword){
-                    var encryptedPassword=await securedPassword.hashPassword(req.body.newPassword)
-                    const updatedUserDoc=await UserModel.findOneAndUpdate({_id:mongoose.Types.ObjectId(req.user.userId)},{"$set":{"password":encryptedPassword}},{new:true})
-                    return res.send(await ResponseHandler.successResponse("Password Updated successfully",updatedUserDoc));
+                if (req.body.newPassword == req.body.confirmPassword) {
+                    if (req.body.newPassword == req.body.oldPassword) {
+                        return res.send(await ResponseHandler.failureResponse("New Password and old password cannot be same"));
+                    }
+                    else {
+                        var encryptedPassword = await securedPassword.hashPassword(req.body.newPassword)
+                        const updatedUserDoc = await UserModel.findOneAndUpdate({ _id: mongoose.Types.ObjectId(req.user.userId) }, { "$set": { "password": encryptedPassword } }, { new: true })
+                        return res.send(await ResponseHandler.successResponse("Password Updated successfully", updatedUserDoc));
+                    }
                 }
-                else{
-                    return res.send(ResponseHandler.failureResponse("New Password and Confirm Password must be the same")); 
+                else {
+                    return res.send(await ResponseHandler.failureResponse("New Password and Confirm Password must be the same"));
                 }
             }
-            else{
+            else {
                 console.log("password is wrong")
-                return res.send(ResponseHandler.failureResponse("Please Enter Correct Password"));
+                return res.send(await ResponseHandler.failureResponse("Please Enter Correct Password"));
             }
 
         }
-        catch(err){
+        catch (err) {
             next(err);
         }
     },
-    async forgotPassword(req,res,next){
-        
+    async forgotPassword(req, res, next) {
+
+    },
+    async deleteFile(path,folderName){
+        fs.unlinkSync(`./../public/${folderName}/`+path, function(err) {
+            if(err){
+                next(err);
+            }
+            else{
+                console.log("File deleted successfully");
+            }
+        })
+    },
+    async uploadProfilePic(req, res, next) {
+        var singleUpload = multer({ storage: await Upload("profilepic", "profilePic") }).single("profilePic");
+        singleUpload(req, res, async function (err) {
+            if (err) {
+                next(err);
+            }
+            else {
+                try {
+                    var userData = await UserModel.findOneAndUpdate({ _id: mongoose.Types.ObjectId(req.user.userId) }, { "$set": { "profile_image": req.file.filename } });
+                    if(userData.profile_image!=""){
+                        User.deleteFile(userData.profile_image,"profilepic");
+                    }
+                    return res.send(await ResponseHandler.successResponse("profilePic uploaded successfully"));
+                }
+                catch (err) {
+                    next(err);
+                }
+
+            }
+        })
     }
 }
 export default User

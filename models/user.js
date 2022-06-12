@@ -18,6 +18,14 @@ const userSchema={
         address:{type:String},
         coordinates:[Number]
     },
+    academics:[{
+        type:{type:String},
+        location:{type:String},
+        from:{type:Date},
+        to:{type:Date},
+        institution_name:{type:String},
+        Role:{type:String}
+    }],
     followers:[{
         id:mongoose.Types.ObjectId,
     }],
